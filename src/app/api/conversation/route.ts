@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 import { auth } from "@clerk/nextjs/server";
 import { ClientOptions } from "openai";
+import {increaseApiLimit, checkApiLimit} from "@/lib/api-limit";
 
 const options: ClientOptions = {
   apiKey: process.env.OPEN_API_KEY,
@@ -19,7 +20,12 @@ export async function POST(req: Request) {
     }
 
     if (!messages) {
-      return new NextResponse("MEssages are required", { status: 400 });
+      return new NextResponse("Messages are required", { status: 400 });
+    }
+
+    const freeTrial = await checkApiLimit();
+    if(!freeTrial) {
+      return new NextResponse("Free trial is expired", {status: 403});
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
@@ -30,6 +36,7 @@ export async function POST(req: Request) {
 
     const result = await model.generateContent(prompt);
     // console.log(result.response.text());
+    await increaseApiLimit();
 
     return new NextResponse(result.response.text(), {status: 201});
   } catch (error) {

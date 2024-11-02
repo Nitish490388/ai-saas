@@ -2,7 +2,7 @@
 
 import Heading from "@/components/Heading";
 
-import { Code } from "lucide-react";
+import { MessageSquare, Music } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { formSchema } from "./constants";
@@ -18,6 +18,8 @@ import {
   FormDescription,
   FormField,
   FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,6 @@ import Empty from "@/components/Empty";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { BotAvatar } from "@/components/bot-avatar";
-import ReactMarkDown from "react-markdown";
 
 export type ChatCompletionRequestMessage = {
   role: "system" | "user" | "assistant";
@@ -36,8 +37,8 @@ export type ChatCompletionRequestMessage = {
 };
 
 
-const CodePage = () => {
-  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+const MusicPage = () => {
+  const [music, setMusic] = useState<string>();
 
   const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,26 +53,14 @@ const CodePage = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const userMessage: ChatCompletionRequestMessage = {
-        role: "user",
-        content: values.prompt
-      }
+      setMusic(undefined);
+      const response = await axios.post("/api/music", values);
 
-      const newMessages = [ userMessage, ...messages];
-
-      const response = await axios.post("/api/code", {
-        messages: newMessages
-      });
-      
-      const modelMessage: ChatCompletionRequestMessage = {
-        role: "system",
-        content: response.data
-      }  
-
-      setMessages((current) => [...current, userMessage, modelMessage]);
+      setMusic(response.data.audio);
+      form.reset();
 
     } catch (error) {
-      console.log("[Error in conversation]"+error);
+      console.log("[Error in music generation]"+error);
       
     } finally {
       router.refresh();
@@ -81,11 +70,11 @@ const CodePage = () => {
   return (
     <div>
       <Heading
-        title="Code generation"
-        description="Our most advanced conversation model"
-        Icon={Code}
-        iconColor="text-green-700"
-        bgColor="bg-green-700/10"
+        title="Music Generation"
+        description="Turn your music into prompt"
+        Icon={Music}
+        iconColor="text-emerald-500"
+        bgColor="bg-emerald-500/10"
       />
       <div className="px-4 lg:px-8">
         <Form {...form}>
@@ -115,7 +104,7 @@ const CodePage = () => {
                      focus-visible:ring-transparent
                      "
                      disabled={isLoading}
-                     placeholder="Simple togle button using react hooks."
+                     placeholder="Piano solo"
                      {...field} />
                   </FormControl>
                 </FormItem>
@@ -137,47 +126,18 @@ const CodePage = () => {
           )
         }
         {
-          messages.length === 0 && !isLoading && (
+          !music && !isLoading && (
             <div>
-              <Empty label="No conversation started!"/>
+              <Empty label="No music generated!"/>
             </div>
           )
         }
         <div className="flex flex-col-reverse gap-y-4">
-          {
-            messages?.map((message, i) => (
-              <div key={i} 
-                className={cn("p-8 w-full  flex items-start gap-x-8 rounded-lg ",
-                  message.role === "user" ? "bg-white border border-black/10"
-                  : "bg-muted"
-                 )}
-              >
-                {message.role === "user" ? <UserAvatar/> : <BotAvatar/>}
-                <ReactMarkDown 
-                  components={{
-                    pre: ({node, ...props}) => (
-                      <div className="overflow-auto  w-full my-2 bg-black/10 p-2 rounded-lg">
-                        <pre {...props}/>
-                      </div>
-                    ),
-                    code: ({node, ...props}) => (
-                      <code className="bg-black/10 rounded-lg p-1" 
-                      {...props}/>
-                    )
-                   }}
-                >
-                {message.content || ""}
-
-                 
-                </ReactMarkDown>
-                 
-              </div>
-            ))
-          }
+          
         </div>
       </div>
     </div>
   );
 };
 
-export default CodePage;
+export default MusicPage;
